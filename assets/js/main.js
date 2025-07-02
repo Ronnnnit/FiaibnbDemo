@@ -149,9 +149,10 @@ function requireAuth() {
 // Session management
 function saveUserSession(user) {
     currentUser = user;
+    localStorage.removeItem('fairbnb_user'); // optional cleanup
     localStorage.setItem('fairbnb_user', JSON.stringify(user));
     updateNavbar();
-}
+}   
 
 // Generate unique ID
 function generateId() {

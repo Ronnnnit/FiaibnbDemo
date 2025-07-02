@@ -1,7 +1,9 @@
+//let currentUser1 = null; // Declare globally
 // Cart page functionality
 document.addEventListener('DOMContentLoaded', () => {
     loadCart();
     renderCart();
+    loadCurrentUser();
 });
 
 // Load cart from localStorage
@@ -10,6 +12,11 @@ function loadCart() {
     cart = cartData ? JSON.parse(cartData) : [];
 }
 
+// Load user from localStorage
+function loadCurrentUser() {
+    const userData = localStorage.getItem('fairbnb_user');
+    currentUser1 = userData ? JSON.parse(userData) : null;
+}
 // Render cart items
 function renderCart() {
     const cartItems = document.getElementById('cart-items');
@@ -107,41 +114,47 @@ function saveCart() {
 }
 
 // Proceed to checkout
-function proceedToCheckout() {
+async function proceedToCheckout() {
     if (!requireAuth()) return;
-    
+
     if (cart.length === 0) {
         showAlert('Your cart is empty', 'error');
         return;
     }
-    
-    // Calculate total
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    
-    // Create booking record
     const booking = {
-        id: generateId(),
+        id: generateId(), // optional, MongoDB will generate one
         date: new Date().toISOString(),
         packages: [...cart],
         total: total,
         userId: currentUser.id
     };
-    
-    // Save to booking history
-    const history = JSON.parse(localStorage.getItem('fairbnb_history') || '[]');
-    history.push(booking);
-    localStorage.setItem('fairbnb_history', JSON.stringify(history));
-    
-    // Clear cart
-    cart = [];
-    saveCart();
-    updateCartCount();
-    
-    // Show success message
-    showAlert(`Booking confirmed! Total: ${formatCurrency(total)}`, 'success');
-    
-    // Redirect to history page
-    setTimeout(() => {
-        window.location.href = 'history.html';
-    }, 2000);
+ 
+    //localStorage.setItem('userId', currentUser1.id);
+    //console.log('userId saved to localStorage:', userId);
+
+
+    try {
+        const response = await fetch('http://localhost:3000/api/bookings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(booking)
+        });
+
+        if (!response.ok) throw new Error('Failed to save booking');
+
+        // Clear local cart
+        cart = [];
+        saveCart();
+        updateCartCount();
+
+        showAlert(`Booking confirmed! Total: ${formatCurrency(total)}`, 'success');
+        setTimeout(() => {
+            window.location.href = 'history.html';
+        }, 2000);
+    } catch (err) {
+        console.error('Checkout error:', err);
+        showAlert('Booking failed. Please try again.', 'error');
+    }
 }
+
